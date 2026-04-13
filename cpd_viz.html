@@ -4,24 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CPD Charges Visualization</title>
-<link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,700;0,900;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="cpd_viz.css">
 </head>
 <body>
 <div class="viz-container">
-  <div class="viz-header">
-    <span class="viz-title" id="viz-title">Charge Categories &mdash; sized by appearances in hearings between 2016 and 2025</span>
-    <button class="back-btn" id="back-btn" onclick="showGroups()">&larr; All categories</button>
-  </div>
   <div class="toggle-bar" id="toggle-bar">
     <span class="toggle-label">Filter by outcome:</span>
   </div>
   <div class="canvas-wrap">
     <canvas id="c"></canvas>
     <div class="tooltip" id="tip"></div>
+    <button class="back-btn" id="back-btn" onclick="showGroups()">&larr; All categories</button>
   </div>
   <div class="viz-note" id="viz-note">
-    Circle size reflects share of 1,492 total hearings with that charge. Use the outcome filter above to see how decisions vary by charge category. Click any bubble to look at individual charges.
+    Circle size and percentage reflects share of 1,749 total hearings where that charge appears. Use the outcome filter above to see how decisions vary by charge category. Click any bubble to look further into grouped charges.
   </div>
 </div>
 <script src="cpd_viz.js"></script>
