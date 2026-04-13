@@ -345,4 +345,4 @@ function updateNote() {
 }
 
 window.addEventListener('resize', resize);
-resize();
+requestAnimationFrame(resize);
