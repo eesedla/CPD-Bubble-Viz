@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CPD Charges Visualization</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,15 +12,19 @@
   <div class="toggle-bar" id="toggle-bar">
     <span class="toggle-label">Filter by outcome:</span>
   </div>
-  <div class="canvas-wrap">
-    <canvas id="c"></canvas>
-    <div class="tooltip" id="tip"></div>
-    <button class="back-btn" id="back-btn" onclick="showGroups()">&larr; All categories</button>
+  <div class="chart-header" id="chart-header">
+    <button class="back-btn" id="back-btn" style="display:none">&larr; All categories</button>
+    <div class="chart-header-text">
+      <span class="chart-title" id="chart-title"></span>
+      <span class="chart-subtitle" id="chart-subtitle"></span>
+    </div>
   </div>
+  <div class="chart-area" id="chart-area"></div>
   <div class="viz-note" id="viz-note">
-    Circle size and percentage reflects share of 1,749 total hearings where that charge appears. Use the outcome filter above to see how decisions vary by charge category. Click any bubble to look further into grouped charges.
+    Bar length reflects share of 1,749 total hearings where that charge appears. Hover any bar to see the sub-charges within each category. Use the outcome filter above to see how decisions vary by charge type. Click a bar to expand its charges.
   </div>
 </div>
 <script src="script.js"></script>
 </body>
 </html>
+ 

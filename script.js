@@ -10,6 +10,7 @@ const toggleBar = document.getElementById('toggle-bar');
 const backBtn = document.getElementById('back-btn');
 const chartHeader = document.getElementById('chart-header');
 const chartTitle = document.getElementById('chart-title');
+const chartSubtitle = document.getElementById('chart-subtitle');
  
 let activeDecision = 'All';
 let tooltip = null;
@@ -84,6 +85,7 @@ function renderGroupBars() {
   backBtn.style.display = 'none';
   chartHeader.classList.remove('visible');
   chartTitle.textContent = '';
+  chartSubtitle.textContent = '';
  
   var sorted = DATA.slice().sort(function(a, b) { return filteredCount(b) - filteredCount(a); });
   var maxGroupCount = Math.max.apply(null, DATA.map(function(g) { return g.count; }));
@@ -180,6 +182,7 @@ function renderChargeBars() {
   backBtn.style.display = 'inline-block';
   chartHeader.classList.add('visible');
   chartTitle.textContent = grp.group;
+  chartSubtitle.textContent = grp.count.toLocaleString() + ' cases · ' + grp.pct + '% of all hearings';
  
   var maxChargeCount = Math.max.apply(null, grp.charges.map(function(c) { return c.count; }));
   var charges = grp.charges.slice().sort(function(a, b) { return filteredCount(b) - filteredCount(a); });
