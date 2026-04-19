@@ -137,6 +137,7 @@ function renderGroupBars() {
         track.appendChild(fill);
       }
     } else {
+      track.style.background = 'transparent';
       var fill = document.createElement('div');
       fill.className = 'bar-fill';
       fill.style.width = fc > 0 ? (fc / group.count * 100) + '%' : '0%';
@@ -209,6 +210,7 @@ function renderChargeBars() {
       fill.style.opacity = '0.85';
       track.appendChild(fill);
     } else {
+      track.style.background = 'transparent';
       var fill = document.createElement('div');
       fill.className = 'bar-fill';
       fill.style.width = fc > 0 ? (fc / charge.count * 100) + '%' : '0%';
