@@ -88,7 +88,6 @@ function renderGroupBars() {
   chartSubtitle.textContent = '';
  
   var sorted = DATA.slice().sort(function(a, b) { return filteredCount(b) - filteredCount(a); });
-  var maxGroupCount = Math.max.apply(null, DATA.map(function(g) { return g.count; }));
  
   sorted.forEach(function(group, i) {
     var fc = filteredCount(group);
@@ -138,7 +137,6 @@ function renderGroupBars() {
         track.appendChild(fill);
       }
     } else {
-      track.style.width = (group.count / maxGroupCount * 100) + '%';
       var fill = document.createElement('div');
       fill.className = 'bar-fill';
       fill.style.width = fc > 0 ? (fc / group.count * 100) + '%' : '0%';
@@ -181,7 +179,6 @@ function renderChargeBars() {
   chartTitle.textContent = grp.group;
   chartSubtitle.textContent = grp.count.toLocaleString() + ' cases · ' + grp.pct + '% of all hearings';
  
-  var maxChargeCount = Math.max.apply(null, grp.charges.map(function(c) { return c.count; }));
   var charges = grp.charges.slice().sort(function(a, b) { return filteredCount(b) - filteredCount(a); });
  
   charges.forEach(function(charge, i) {
@@ -212,7 +209,6 @@ function renderChargeBars() {
       fill.style.opacity = '0.85';
       track.appendChild(fill);
     } else {
-      track.style.width = (charge.count / maxChargeCount * 100) + '%';
       var fill = document.createElement('div');
       fill.className = 'bar-fill';
       fill.style.width = fc > 0 ? (fc / charge.count * 100) + '%' : '0%';
