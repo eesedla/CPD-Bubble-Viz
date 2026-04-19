@@ -137,13 +137,9 @@ function renderGroupBars() {
         track.appendChild(fill);
       }
     } else {
-      track.style.background = 'transparent';
-      var fill = document.createElement('div');
-      fill.className = 'bar-fill';
-      fill.style.width = fc > 0 ? (fc / group.count * 100) + '%' : '0%';
-      fill.style.background = DECISION_COLORS[activeDecision];
-      fill.style.opacity = '0.85';
-      track.appendChild(fill);
+      track.style.width = fc > 0 ? (fc / group.count * 100) + '%' : '0%';
+      track.style.background = DECISION_COLORS[activeDecision];
+      track.style.opacity = '0.85';
     }
  
     // Click to drill down
@@ -210,13 +206,9 @@ function renderChargeBars() {
       fill.style.opacity = '0.85';
       track.appendChild(fill);
     } else {
-      track.style.background = 'transparent';
-      var fill = document.createElement('div');
-      fill.className = 'bar-fill';
-      fill.style.width = fc > 0 ? (fc / charge.count * 100) + '%' : '0%';
-      fill.style.background = DECISION_COLORS[activeDecision];
-      fill.style.opacity = '0.85';
-      track.appendChild(fill);
+      track.style.width = fc > 0 ? (fc / charge.count * 100) + '%' : '0%';
+      track.style.background = DECISION_COLORS[activeDecision];
+      track.style.opacity = '0.85';
     }
  
     // Hover events for tooltip
