@@ -138,16 +138,13 @@ function renderGroupBars() {
         track.appendChild(fill);
       }
     } else {
-      var totalBar = document.createElement('div');
-      totalBar.className = 'bar-total';
-      totalBar.style.width = (group.count / maxGroupCount * 100) + '%';
+      track.style.width = (group.count / maxGroupCount * 100) + '%';
       var fill = document.createElement('div');
       fill.className = 'bar-fill';
       fill.style.width = fc > 0 ? (fc / group.count * 100) + '%' : '0%';
       fill.style.background = DECISION_COLORS[activeDecision];
       fill.style.opacity = '0.85';
-      totalBar.appendChild(fill);
-      track.appendChild(totalBar);
+      track.appendChild(fill);
     }
  
     // Click to drill down
@@ -215,16 +212,13 @@ function renderChargeBars() {
       fill.style.opacity = '0.85';
       track.appendChild(fill);
     } else {
-      var totalBar = document.createElement('div');
-      totalBar.className = 'bar-total';
-      totalBar.style.width = (charge.count / maxChargeCount * 100) + '%';
+      track.style.width = (charge.count / maxChargeCount * 100) + '%';
       var fill = document.createElement('div');
       fill.className = 'bar-fill';
       fill.style.width = fc > 0 ? (fc / charge.count * 100) + '%' : '0%';
       fill.style.background = DECISION_COLORS[activeDecision];
       fill.style.opacity = '0.85';
-      totalBar.appendChild(fill);
-      track.appendChild(totalBar);
+      track.appendChild(fill);
     }
  
     // Hover events for tooltip

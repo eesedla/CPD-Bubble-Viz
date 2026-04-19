@@ -263,13 +263,6 @@ body {
 }
  
 /* Segment hover inside bar */
-.bar-total {
-  position: relative;
-  height: 100%;
-  background: rgba(64,79,84,0.10);
-  display: inline-block;
-  vertical-align: top;
-}
 .bar-segment {
   position: absolute;
   top: 0;
