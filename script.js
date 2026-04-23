@@ -12,7 +12,7 @@ const chartHeader = document.getElementById('chart-header');
 const chartTitle = document.getElementById('chart-title');
 const chartSubtitle = document.getElementById('chart-subtitle');
  
-let activeDecision = 'All';
+let activeDecisions = new Set();
 let tooltip = null;
 let mode = 'groups';
 let activeGroup = null;
@@ -32,31 +32,30 @@ function initTooltip() {
 function buildToggleBar() {
   toggleBar.innerHTML = '<span class="toggle-label">Filter by outcome:</span>';
   DECISION_ORDER.forEach(function(label) {
+    var isAll = label === 'All';
+    var isActive = isAll ? activeDecisions.size === 0 : activeDecisions.has(label);
     var btn = document.createElement('button');
-    btn.className = 'toggle-btn' + (label === activeDecision ? ' active' : '');
+    btn.className = 'toggle-btn' + (isActive ? ' active' : '');
     btn.dataset.decision = label;
-    if (label === 'All') {
+    if (isAll) {
       btn.innerHTML = 'All outcomes';
     } else {
       var color = DECISION_COLORS[label];
-      var dotBg = label === activeDecision ? 'rgba(255,255,255,0.8)' : color;
+      var dotBg = isActive ? 'rgba(255,255,255,0.8)' : color;
       btn.innerHTML = '<span class="dot" style="background:' + dotBg + '"></span>' + label;
     }
-    if (label === activeDecision) {
-      btn.style.background = label === 'All' ? '#1C1916' : DECISION_COLORS[label];
+    if (isActive) {
+      btn.style.background = isAll ? '#1C1916' : DECISION_COLORS[label];
     }
     btn.addEventListener('click', function() {
-      activeDecision = label;
-      document.querySelectorAll('.toggle-btn').forEach(function(b) {
-        b.classList.remove('active');
-        b.style.background = '';
-        var dot = b.querySelector('.dot');
-        if (dot) dot.style.background = DECISION_COLORS[b.dataset.decision];
-      });
-      btn.classList.add('active');
-      btn.style.background = label === 'All' ? '#1C1916' : DECISION_COLORS[label];
-      var dot = btn.querySelector('.dot');
-      if (dot) dot.style.background = 'rgba(255,255,255,0.8)';
+      if (isAll) {
+        activeDecisions.clear();
+      } else if (activeDecisions.has(label)) {
+        activeDecisions.delete(label);
+      } else {
+        activeDecisions.add(label);
+      }
+      buildToggleBar();
       updateNote();
       renderBars();
     });
@@ -66,9 +65,12 @@ function buildToggleBar() {
  
 // --- Filtered count helper ---
 function filteredCount(item) {
-  if (activeDecision === 'All') return item.count;
-  var dec = (item.decisions || []).find(function(d) { return d.label === activeDecision; });
-  return dec ? dec.count : 0;
+  if (activeDecisions.size === 0) return item.count;
+  var total = 0;
+  (item.decisions || []).forEach(function(d) {
+    if (activeDecisions.has(d.label)) total += d.count;
+  });
+  return total;
 }
  
 // --- Render bars ---
@@ -99,18 +101,18 @@ function renderGroupBars() {
     var label = document.createElement('div');
     label.className = 'bar-row-label';
     var countText;
-    if (activeDecision === 'All') {
+    if (activeDecisions.size === 0) {
       countText = fc.toLocaleString() + ' hearings (' + group.pct + '%)';
     } else {
       var pctOfGroup = group.count > 0 ? Math.round(fc / group.count * 100) : 0;
-      countText = fc.toLocaleString() + ' ' + activeDecision.toLowerCase() + (fc !== 1 ? 's' : '') + ' (' + pctOfGroup + '% of ' + group.count.toLocaleString() + ' cases)';
+      countText = fc.toLocaleString() + ' cases (' + pctOfGroup + '% of ' + group.count.toLocaleString() + ')';
     }
     label.innerHTML = '<span>' + group.group + '</span><span class="count-label">' + countText + '</span>';
  
     var track = document.createElement('div');
     track.className = 'bar-track';
  
-    if (activeDecision === 'All') {
+    if (activeDecisions.size === 0) {
       if (group.charges && group.charges.length > 1) {
         var runningPct = 0;
         var charges = group.charges.slice().sort(function(a, b) { return b.count - a.count; });
@@ -138,12 +140,23 @@ function renderGroupBars() {
         track.appendChild(fill);
       }
     } else {
-      var fill = document.createElement('div');
-      fill.className = 'bar-fill';
-      fill.style.width = fc > 0 ? (fc / group.count * 100) + '%' : '0%';
-      fill.style.background = DECISION_COLORS[activeDecision];
-      fill.style.opacity = '0.85';
-      track.appendChild(fill);
+      var runningPct = 0;
+      DECISION_ORDER.forEach(function(dlabel) {
+        if (dlabel === 'All' || !activeDecisions.has(dlabel)) return;
+        var dec = (group.decisions || []).find(function(d) { return d.label === dlabel; });
+        var dc = dec ? dec.count : 0;
+        if (dc <= 0) return;
+        var segPct = group.count > 0 ? (dc / group.count * 100) : 0;
+        var seg = document.createElement('div');
+        seg.className = 'bar-segment';
+        seg.style.left = runningPct + '%';
+        seg.style.width = segPct + '%';
+        seg.style.background = DECISION_COLORS[dlabel];
+        seg.style.opacity = '0.85';
+        if (runningPct > 0) seg.style.borderLeft = '1px solid rgba(244,240,230,0.6)';
+        track.appendChild(seg);
+        runningPct += segPct;
+      });
     }
  
     // Click to drill down
@@ -192,18 +205,18 @@ function renderChargeBars() {
     var label = document.createElement('div');
     label.className = 'bar-row-label';
     var countText;
-    if (activeDecision === 'All') {
+    if (activeDecisions.size === 0) {
       countText = fc.toLocaleString() + ' hearings (' + charge.pct + '%)';
     } else {
       var pctOfCharge = charge.count > 0 ? Math.round(fc / charge.count * 100) : 0;
-      countText = fc.toLocaleString() + ' ' + activeDecision.toLowerCase() + (fc !== 1 ? 's' : '') + ' (' + pctOfCharge + '% of ' + charge.count.toLocaleString() + ' cases)';
+      countText = fc.toLocaleString() + ' cases (' + pctOfCharge + '% of ' + charge.count.toLocaleString() + ')';
     }
     label.innerHTML = '<span>' + charge.name + '</span><span class="count-label">' + countText + '</span>';
  
     var track = document.createElement('div');
     track.className = 'bar-track';
  
-    if (activeDecision === 'All') {
+    if (activeDecisions.size === 0) {
       var fill = document.createElement('div');
       fill.className = 'bar-fill';
       fill.style.width = maxChargeCount > 0 ? (charge.count / maxChargeCount * 100) + '%' : '0%';
@@ -211,12 +224,23 @@ function renderChargeBars() {
       fill.style.opacity = '0.85';
       track.appendChild(fill);
     } else {
-      var fill = document.createElement('div');
-      fill.className = 'bar-fill';
-      fill.style.width = fc > 0 ? (fc / charge.count * 100) + '%' : '0%';
-      fill.style.background = DECISION_COLORS[activeDecision];
-      fill.style.opacity = '0.85';
-      track.appendChild(fill);
+      var runningPct = 0;
+      DECISION_ORDER.forEach(function(dlabel) {
+        if (dlabel === 'All' || !activeDecisions.has(dlabel)) return;
+        var dec = (charge.decisions || []).find(function(d) { return d.label === dlabel; });
+        var dc = dec ? dec.count : 0;
+        if (dc <= 0) return;
+        var segPct = charge.count > 0 ? (dc / charge.count * 100) : 0;
+        var seg = document.createElement('div');
+        seg.className = 'bar-segment';
+        seg.style.left = runningPct + '%';
+        seg.style.width = segPct + '%';
+        seg.style.background = DECISION_COLORS[dlabel];
+        seg.style.opacity = '0.85';
+        if (runningPct > 0) seg.style.borderLeft = '1px solid rgba(244,240,230,0.6)';
+        track.appendChild(seg);
+        runningPct += segPct;
+      });
     }
  
     // Hover events for tooltip
@@ -275,7 +299,7 @@ function showGroupTooltip(group, e) {
   var fc = filteredCount(group);
   var html = '<span class="tt-title">' + group.group + '</span>';
  
-  if (activeDecision === 'All') {
+  if (activeDecisions.size === 0) {
     html += '<span class="tt-total">' + group.count.toLocaleString() + ' hearings (' + group.pct + '% of all cases)</span>';
  
     if (group.charges && group.charges.length > 0) {
@@ -303,25 +327,32 @@ function showGroupTooltip(group, e) {
         + '<span class="tt-pct">(' + pct + '%)</span></div>';
     });
   } else {
-    html += '<span class="tt-total">' + group.count.toLocaleString() + ' total hearings</span>';
-    html += '<div class="tt-row">'
-      + '<div class="tt-swatch" style="background:' + DECISION_COLORS[activeDecision] + '"></div>'
-      + '<span class="tt-label">' + activeDecision + '</span>'
-      + '<span class="tt-count">' + fc + '</span>'
-      + '<span class="tt-pct">(' + (group.count > 0 ? Math.round(fc / group.count * 100) : 0) + '%)</span></div>';
+    var pctOfGroup = group.count > 0 ? Math.round(fc / group.count * 100) : 0;
+    html += '<span class="tt-total">' + fc + ' of ' + group.count.toLocaleString() + ' cases (' + pctOfGroup + '%)</span>';
+    var selectedLabels = DECISION_ORDER.filter(function(d) { return d !== 'All' && activeDecisions.has(d); });
+    selectedLabels.forEach(function(dlabel) {
+      var dec = (group.decisions || []).find(function(d) { return d.label === dlabel; });
+      var dc = dec ? dec.count : 0;
+      if (dc === 0) return;
+      html += '<div class="tt-row">'
+        + '<div class="tt-swatch" style="background:' + DECISION_COLORS[dlabel] + '"></div>'
+        + '<span class="tt-label">' + dlabel + '</span>'
+        + '<span class="tt-count">' + dc + '</span>'
+        + '<span class="tt-pct">(' + (group.count > 0 ? Math.round(dc / group.count * 100) : 0) + '%)</span></div>';
+    });
  
     if (group.charges && group.charges.length > 1) {
       html += '<hr class="tt-divider">';
       html += '<span class="tt-section-label">By charge</span>';
-      var charges = group.charges.slice().sort(function(a, b) {
+      var chargesSorted = group.charges.slice().sort(function(a, b) {
         return filteredCount(b) - filteredCount(a);
       });
-      charges.forEach(function(c) {
-        var cfc = filteredCount(c);
+      chargesSorted.forEach(function(ch) {
+        var cfc = filteredCount(ch);
         if (cfc === 0) return;
         html += '<div class="tt-row">'
-          + '<div class="tt-bar-swatch" style="background:' + DECISION_COLORS[activeDecision] + '"></div>'
-          + '<span class="tt-label">' + c.name + '</span>'
+          + '<div class="tt-bar-swatch" style="background:' + group.color + '"></div>'
+          + '<span class="tt-label">' + ch.name + '</span>'
           + '<span class="tt-count">' + cfc + '</span></div>';
       });
     }
@@ -339,7 +370,7 @@ function showChargeTooltip(charge, grp, e) {
   var html = '<span class="tt-title">' + charge.name + '</span>';
   html += '<span class="tt-total">' + charge.count.toLocaleString() + ' hearings (' + charge.pct + '% of all cases)</span>';
  
-  if (activeDecision === 'All') {
+  if (activeDecisions.size === 0) {
     html += '<span class="tt-section-label">Outcomes</span>';
     var decisions = (charge.decisions || []).slice().sort(function(a, b) { return b.count - a.count; });
     decisions.forEach(function(d) {
@@ -351,11 +382,17 @@ function showChargeTooltip(charge, grp, e) {
         + '<span class="tt-pct">(' + pct + '%)</span></div>';
     });
   } else {
-    html += '<div class="tt-row">'
-      + '<div class="tt-swatch" style="background:' + DECISION_COLORS[activeDecision] + '"></div>'
-      + '<span class="tt-label">' + activeDecision + '</span>'
-      + '<span class="tt-count">' + fc + '</span>'
-      + '<span class="tt-pct">(' + (charge.count > 0 ? Math.round(fc / charge.count * 100) : 0) + '%)</span></div>';
+    var selectedLabels = DECISION_ORDER.filter(function(d) { return d !== 'All' && activeDecisions.has(d); });
+    selectedLabels.forEach(function(dlabel) {
+      var dec = (charge.decisions || []).find(function(d) { return d.label === dlabel; });
+      var dc = dec ? dec.count : 0;
+      if (dc === 0) return;
+      html += '<div class="tt-row">'
+        + '<div class="tt-swatch" style="background:' + DECISION_COLORS[dlabel] + '"></div>'
+        + '<span class="tt-label">' + dlabel + '</span>'
+        + '<span class="tt-count">' + dc + '</span>'
+        + '<span class="tt-pct">(' + (charge.count > 0 ? Math.round(dc / charge.count * 100) : 0) + '%)</span></div>';
+    });
   }
  
   tooltip.innerHTML = html;
@@ -382,17 +419,17 @@ function positionTooltip(e) {
 // --- Note ---
 function updateNote() {
   if (mode === 'groups') {
-    if (activeDecision === 'All') {
+    if (activeDecisions.size === 0) {
       vizNote.textContent = 'Bar length is relative to the most common charge category. Hover for sub-charge and outcome breakdowns. Click a bar to expand its charges.';
     } else {
-      vizNote.textContent = 'Filtered by \u201c' + activeDecision + '.\u201d Each bar track represents that category\u2019s total cases (scaled to the largest group). The filled area shows the share of those cases that resulted in this outcome. Click a bar to expand.';
+      vizNote.textContent = 'Each bar track shows that category\u2019s total cases. The filled area shows what share resulted in the selected outcome(s). Segments are colored by outcome type. Click a bar to expand.';
     }
   } else {
     var name = activeGroup ? activeGroup.group : '';
-    if (activeDecision === 'All') {
+    if (activeDecisions.size === 0) {
       vizNote.textContent = 'Bar length is relative to the most common sub-charge in \u201c' + name + '.\u201d Hover for outcome breakdowns.';
     } else {
-      vizNote.textContent = 'Filtered by \u201c' + activeDecision + '\u201d within \u201c' + name + '.\u201d Each bar track represents that charge\u2019s total cases. The filled area shows the share that resulted in this outcome.';
+      vizNote.textContent = 'Each bar track shows that charge\u2019s total cases. The filled area shows what share resulted in the selected outcome(s). Segments are colored by outcome type.';
     }
   }
 }
