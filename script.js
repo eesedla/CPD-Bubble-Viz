@@ -89,6 +89,7 @@ function renderGroupBars() {
  
   var sorted = DATA.slice().sort(function(a, b) { return filteredCount(b) - filteredCount(a); });
  
+  var maxCount = sorted.length > 0 ? sorted[0].count : 1;
   sorted.forEach(function(group, i) {
     var fc = filteredCount(group);
     var row = document.createElement('div');
@@ -114,7 +115,7 @@ function renderGroupBars() {
         var runningPct = 0;
         var charges = group.charges.slice().sort(function(a, b) { return b.count - a.count; });
         charges.forEach(function(charge, ci) {
-          var segWidthPct = TOTAL_HEARINGS > 0 ? (charge.count / TOTAL_HEARINGS * 100) : 0;
+          var segWidthPct = maxCount > 0 ? (charge.count / maxCount * 100) : 0;
           if (segWidthPct <= 0) return;
           var seg = document.createElement('div');
           seg.className = 'bar-segment';
@@ -131,7 +132,7 @@ function renderGroupBars() {
       } else {
         var fill = document.createElement('div');
         fill.className = 'bar-fill';
-        fill.style.width = (fc / TOTAL_HEARINGS * 100) + '%';
+        fill.style.width = (fc / maxCount * 100) + '%';
         fill.style.background = group.color;
         fill.style.opacity = '0.85';
         track.appendChild(fill);
@@ -181,6 +182,7 @@ function renderChargeBars() {
  
   var charges = grp.charges.slice().sort(function(a, b) { return filteredCount(b) - filteredCount(a); });
  
+  var maxChargeCount = charges.length > 0 ? charges[0].count : 1;
   charges.forEach(function(charge, i) {
     var fc = filteredCount(charge);
     var row = document.createElement('div');
@@ -204,7 +206,7 @@ function renderChargeBars() {
     if (activeDecision === 'All') {
       var fill = document.createElement('div');
       fill.className = 'bar-fill';
-      fill.style.width = grp.count > 0 ? (charge.count / grp.count * 100) + '%' : '0%';
+      fill.style.width = maxChargeCount > 0 ? (charge.count / maxChargeCount * 100) + '%' : '0%';
       fill.style.background = grp.color;
       fill.style.opacity = '0.85';
       track.appendChild(fill);
@@ -381,14 +383,14 @@ function positionTooltip(e) {
 function updateNote() {
   if (mode === 'groups') {
     if (activeDecision === 'All') {
-      vizNote.textContent = 'Each bar track represents all 1,749 hearings. The filled portion shows how frequently that charge category appears. Hover for sub-charge and outcome breakdowns. Click a bar to expand its charges.';
+      vizNote.textContent = 'Bar length is relative to the most common charge category. Hover for sub-charge and outcome breakdowns. Click a bar to expand its charges.';
     } else {
       vizNote.textContent = 'Filtered by \u201c' + activeDecision + '.\u201d Each bar track represents that category\u2019s total cases (scaled to the largest group). The filled area shows the share of those cases that resulted in this outcome. Click a bar to expand.';
     }
   } else {
     var name = activeGroup ? activeGroup.group : '';
     if (activeDecision === 'All') {
-      vizNote.textContent = 'Each bar track represents all \u201c' + name + '\u201d hearings. The filled portion shows each sub-charge\u2019s share of the category. Hover for outcome breakdowns.';
+      vizNote.textContent = 'Bar length is relative to the most common sub-charge in \u201c' + name + '.\u201d Hover for outcome breakdowns.';
     } else {
       vizNote.textContent = 'Filtered by \u201c' + activeDecision + '\u201d within \u201c' + name + '.\u201d Each bar track represents that charge\u2019s total cases. The filled area shows the share that resulted in this outcome.';
     }
