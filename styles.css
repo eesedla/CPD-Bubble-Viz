@@ -1,7 +1,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   background: #ffffff;
-  font-family: (--newspack-theme-font-body, "Inter", "Helvetica", sans-serif)
+  font-family: var(--newspack-theme-font-body, "Inter", "Helvetica", sans-serif);
   display: flex;
   align-items: flex-start;
   justify-content: center;
