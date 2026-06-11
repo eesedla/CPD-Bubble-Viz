@@ -103,8 +103,7 @@ function renderGroupBars() {
     if (activeDecisions.size === 0) {
       countText = fc.toLocaleString() + ' hearings (' + group.pct + '%)';
     } else {
-      var pctOfGroup = group.count > 0 ? Math.round(fc / group.count * 100) : 0;
-      countText = fc.toLocaleString() + ' cases (' + pctOfGroup + '% of ' + group.count.toLocaleString() + ')';
+      countText = fc.toLocaleString() + ' of ' + group.count.toLocaleString() + ' cases';
     }
     label.innerHTML = '<span>' + group.group + '</span><span class="count-label">' + countText + '</span>';
  
