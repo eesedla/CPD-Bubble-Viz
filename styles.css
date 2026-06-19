@@ -11,9 +11,7 @@ body {
 .viz-container {
   width: 100%;
   max-width: 900px;
-  background: #f4f0e6;
-  border: 1px solid #404F54;
-  border-top: none;
+  background: transparent;
   overflow: hidden;
 }
 .viz-container::before {
@@ -27,8 +25,8 @@ body {
 /* Viz header */
 .viz-header {
   padding: 20px 20px 16px;
-  border-bottom: 1px solid #404F54;
 }
+
 .viz-kicker {
   font-family: 'Gotham', 'Gotham Medium', sans-serif;
   font-weight: 500;
@@ -60,12 +58,11 @@ body {
 /* Toggle bar */
 .toggle-bar {
   padding: 10px 20px;
-  border-bottom: 1px solid #404F54;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  background: #F4F0E6;
+  background: transparent;
 }
 .toggle-label {
   font-size: 0.75rem;
@@ -318,6 +315,5 @@ body {
   color: #404F54;
   padding: 8px 15px 8px;
   font-family: var(--newspack-theme-font-body, "Inter", "Helvetica", sans-serif);
-  border-top: 1px solid #404F54;
-  background: #F4F0E6;
+  background: transparent;
 }
