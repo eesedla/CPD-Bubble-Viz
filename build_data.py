@@ -60,11 +60,8 @@ def normalize_decision(raw_d):
              "reinstruction"):                          return "Reinstruction"
     if r == "written reprimand":                        return "Written Reprimand"
     if r == "termination":                              return "Termination"
-    if r == "separation":                               return "Separation"
-    if r == "resignation":                              return "Resignation"
+    if r in ("separation", "resignation"):              return "Resignation"
     if r == "demotion":                                 return "Demotion"
-    if r in ("written warning", "warning",
-             "verbal warning"):                         return "Warning"
     return None
 
 CSV_CHARGE_ALIASES = {

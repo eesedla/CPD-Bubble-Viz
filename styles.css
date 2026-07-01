@@ -224,7 +224,7 @@ body {
  
 /* Tooltip */
 .bar-tooltip {
-  position: absolute;
+  position: fixed;
   pointer-events: none;
   background: #404F54;
   color: #fff;
@@ -303,17 +303,3 @@ body {
   opacity: 0.92;
 }
  
-/* Note */
-.viz-note {
-  font-size: 12px;
-  font-family: 'Inter', Arial, sans-serif;
-  font-weight: 500;
-  color: #404F54;
-  opacity: 0.55;
-  line-height: 1.4;
-
-  color: #404F54;
-  padding: 8px 15px 8px;
-  font-family: var(--newspack-theme-font-body, "Inter", "Helvetica", sans-serif);
-  background: transparent;
-}
