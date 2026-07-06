@@ -80,7 +80,7 @@ body {
   font-weight: 500;
   padding: 6px 14px;
   border-radius: 2px;
-  border: 1px solid #404F54;
+  border: 1px solid #ccd8db;
   background: #fff;
   cursor: pointer;
   transition: all 0.12s;
@@ -90,7 +90,7 @@ body {
   align-items: center;
   gap: 5px;
 }
-.toggle-btn:hover { border-color: #404F54; color: #404F54; }
+.toggle-btn:hover { border-color: #23685b; color: #404F54; }
 .toggle-btn.active { color: white; border-color: transparent; }
 .toggle-btn .dot {
   width: 7px; height: 7px;
@@ -228,13 +228,13 @@ body {
   pointer-events: none;
   background: #404F54;
   color: #fff;
-  font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
   font-size: 0.75rem;
   line-height: 1.5;
   padding: 12px 16px;
   border-radius: 2px;
   max-width: 280px;
-  min-width: 200px;
+  min-width: 180px;
   opacity: 0;
   transition: opacity 0.15s;
   z-index: 20;
@@ -246,7 +246,6 @@ body {
   font-size: 13px;
   display: block;
   margin-bottom: 2px;
-  font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
 }
 .bar-tooltip .tt-total {
   font-size: 0.68rem;
@@ -272,15 +271,15 @@ body {
   margin-top: 3px;
 }
 .bar-tooltip .tt-swatch {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 .bar-tooltip .tt-bar-swatch {
-  width: 8px;
-  height: 8px;
-  border-radius: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 .bar-tooltip .tt-label { flex: 1; font-size: 0.72rem; }
