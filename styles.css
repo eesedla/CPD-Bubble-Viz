@@ -255,6 +255,13 @@ body {
   padding-bottom: 7px;
   border-bottom: 1px solid rgba(255,255,255,0.15);
 }
+.bar-tooltip .tt-desc {
+  display: block;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  opacity: 0.75;
+  margin: -4px 0 8px;
+}
 .bar-tooltip .tt-section-label {
   font-size: 0.65rem;
   font-weight: 600;

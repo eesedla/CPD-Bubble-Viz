@@ -29,6 +29,10 @@ for group in TEMPLATE:
     for charge in group["charges"]:
         charge_to_group[charge["name"].strip().lower()] = group["group"]
 
+# The Body Camera group's charges are display subcategories (classified from
+# text), not CSV charge tokens — map the real CSV token explicitly.
+charge_to_group["body camera violation"] = "Body Camera Violation" 
+
 # Build canonical charge name → display name (preserve casing)
 charge_display = {}
 for group in TEMPLATE:
@@ -131,6 +135,45 @@ if unknown_decs:
     for d, n in sorted(unknown_decs.items(), key=lambda x: -x[1]):
         print(f"  [{n:4d}x]  {d}")
 
+# ── 3b. WCS subcategory classification (Body Camera Violation drill-down) ────
+# The CSV only has a generic "WCS Violation" charge token, so the drill-down
+# subcategories are classified from the WCS-related text of each record.
+
+WCS_KEY_BY_NAME = {
+    "Failed to Activate":      "failed_activate",
+    "Unspecified":             "unspecified",
+    "Ended Recording Early":   "ending_recording",
+    "Failed to Upload or Tag": "upload_tag",
+    "Damaged or Lost Camera":  "unsecured",
+}
+
+def _wcs_text(row):
+    chunks = re.split(r"[.;\n]", row.get("Charge & Discipline Decision", "") or "")
+    return " | ".join(c.strip() for c in chunks
+                      if re.search(r"wcs|wearable|body.?camera", c, re.I)).lower()
+
+def classify_wcs(t):
+    f = set()
+    if re.search(r"buffer|de-?activat|turn(ed|ing)? off|end(ed|ing)? (the )?record|fail[^|]{0,40}keep[^|]{0,30}event mode|remain(ed)? in event mode", t): f.add("ending_recording")
+    if re.search(r"upload|\btag(g|\b)|categoriz", t): f.add("upload_tag")
+    if re.search(r"fail[^|]{0,60}safeguard|damage to (city property )?\(?wcs", t): f.add("unsecured")
+    if re.search(r"fail[^|]{0,80}(?<!de)activat|without activating|did not activate|never activated|fail[^|]{0,80}(place|put)[^|]{0,50}event mode", t): f.add("failed_activate")
+    return f or {"unspecified"}
+
+wcs_count = defaultdict(int)
+wcs_decs  = defaultdict(lambda: defaultdict(int))
+with open(CSV_PATH, newline="", encoding="utf-8-sig") as f:
+    for row in csv.DictReader(f):
+        if not any(("wcs" in c.lower() or "body camera" in c.lower())
+                   for c in (row["Charges"] or "").split(",")):
+            continue
+        nds = [normalize_decision(d) for d in (row["Decision type"] or "").split(",") if d.strip()]
+        nds = [d for d in nds if d]
+        for key in classify_wcs(_wcs_text(row)):
+            wcs_count[key] += 1
+            for nd in nds:
+                wcs_decs[key][nd] += 1
+
 # ── 4. Reconstruct DATA ───────────────────────────────────────────────────────
 
 def build_decisions(dec_counts):
@@ -149,6 +192,18 @@ for group in TEMPLATE:
 
     new_charges = []
     for charge in group["charges"]:
+        if gname == "Body Camera Violation" and charge["name"] in WCS_KEY_BY_NAME:
+            wkey = WCS_KEY_BY_NAME[charge["name"]]
+            entry = {
+                "name":      charge["name"],
+                "count":     wcs_count[wkey],
+                "pct":       round(wcs_count[wkey] / total_hearings * 100, 1),
+                "decisions": build_decisions(wcs_decs[wkey]),
+            }
+            if "desc" in charge:
+                entry["desc"] = charge["desc"]
+            new_charges.append(entry)
+            continue
         ckey   = charge["name"].strip().lower()
         ccount = charge_count[ckey]
         cpct   = round(ccount / total_hearings * 100, 1)
