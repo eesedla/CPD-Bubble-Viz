@@ -109,40 +109,65 @@ function renderGroupBars() {
     track.className = 'bar-track';
  
     if (activeDecisions.size === 0) {
-      if (group.charges && group.charges.length > 1) {
-        var runningPct = 0;
-        var charges = group.charges.slice().sort(function(a, b) { return b.count - a.count; });
-        charges.forEach(function(charge, ci) {
-          var segWidthPct = maxCount > 0 ? (charge.count / maxCount * 100) : 0;
-          if (segWidthPct <= 0) return;
-          var seg = document.createElement('div');
-          seg.className = 'bar-segment';
-          seg.style.left = runningPct + '%';
-          seg.style.width = segWidthPct + '%';
-          seg.style.background = group.color;
-          seg.style.opacity = '0.85';
-          if (ci > 0) {
-            seg.style.borderLeft = '1px solid rgba(244,240,230,0.6)';
-          }
-          track.appendChild(seg);
-          runningPct += segWidthPct;
-        });
-      } else {
-        var fill = document.createElement('div');
-        fill.className = 'bar-fill';
-        fill.style.width = (fc / maxCount * 100) + '%';
-        fill.style.background = group.color;
-        fill.style.opacity = '0.85';
-        track.appendChild(fill);
-      }
-    } else {
+      // Total bar length is fixed by group size relative to the largest
+      // group; decisions can double-count within a group (a hearing with
+      // multiple charges in the same group, or multiple outcomes, gets
+      // tallied more than once — see build_data.py), so segment widths are
+      // each decision's SHARE of that group's decision total, not its raw
+      // count against maxCount. That keeps the bar length honest and
+      // guarantees every outcome present gets a visible slice instead of
+      // some being pushed past 100% and clipped by the track.
+      var barWidthPct = maxCount > 0 ? (group.count / maxCount * 100) : 0;
+      var decisionsSum = 0;
+      DECISION_ORDER.forEach(function(dlabel) {
+        if (dlabel === 'All') return;
+        var dec = (group.decisions || []).find(function(d) { return d.label === dlabel; });
+        decisionsSum += dec ? dec.count : 0;
+      });
       var runningPct = 0;
+      DECISION_ORDER.forEach(function(dlabel) {
+        if (dlabel === 'All') return;
+        var dec = (group.decisions || []).find(function(d) { return d.label === dlabel; });
+        var dc = dec ? dec.count : 0;
+        if (dc <= 0) return;
+        var segWidthPct = decisionsSum > 0 ? (dc / decisionsSum) * barWidthPct : 0;
+        if (segWidthPct <= 0) return;
+        var seg = document.createElement('div');
+        seg.className = 'bar-segment';
+        seg.style.left = runningPct + '%';
+        seg.style.width = segWidthPct + '%';
+        seg.style.background = DECISION_COLORS[dlabel];
+        seg.style.opacity = '0.85';
+        if (runningPct > 0) {
+          seg.style.borderLeft = '1px solid rgba(244,240,230,0.6)';
+        }
+        track.appendChild(seg);
+        runningPct += segWidthPct;
+      });
+    } else {
+      // Selecting multiple outcomes can double-count a hearing (same source
+      // quirk as the unfiltered view — see the comment above), so cap the
+      // denominator at whichever is bigger, the group's own total or the
+      // selected outcomes' raw sum. That keeps the usual single-outcome
+      // case reading as "% of this group" while still guaranteeing the
+      // segments never exceed 100% and get clipped when several outcomes
+      // that share hearings are selected together.
+      var rawSum = 0;
+      var selectedDc = {};
       DECISION_ORDER.forEach(function(dlabel) {
         if (dlabel === 'All' || !activeDecisions.has(dlabel)) return;
         var dec = (group.decisions || []).find(function(d) { return d.label === dlabel; });
         var dc = dec ? dec.count : 0;
+        selectedDc[dlabel] = dc;
+        rawSum += dc;
+      });
+      var denom = Math.max(group.count, rawSum, 1);
+      var runningPct = 0;
+      DECISION_ORDER.forEach(function(dlabel) {
+        if (dlabel === 'All' || !activeDecisions.has(dlabel)) return;
+        var dc = selectedDc[dlabel] || 0;
         if (dc <= 0) return;
-        var segPct = group.count > 0 ? (dc / group.count * 100) : 0;
+        var segPct = (dc / denom) * 100;
         var seg = document.createElement('div');
         seg.className = 'bar-segment';
         seg.style.left = runningPct + '%';
@@ -212,20 +237,55 @@ function renderChargeBars() {
     track.className = 'bar-track';
  
     if (activeDecisions.size === 0) {
-      var fill = document.createElement('div');
-      fill.className = 'bar-fill';
-      fill.style.width = maxChargeCount > 0 ? (charge.count / maxChargeCount * 100) + '%' : '0%';
-      fill.style.background = grp.color;
-      fill.style.opacity = '0.85';
-      track.appendChild(fill);
-    } else {
+      // Same fixed-length-then-share approach as the group bars: total
+      // width tracks charge.count against the largest charge, and each
+      // decision gets its share of that charge's decision total so
+      // double-counted outcomes can't push later segments past 100%.
+      var barWidthPct = maxChargeCount > 0 ? (charge.count / maxChargeCount * 100) : 0;
+      var decisionsSum = 0;
+      DECISION_ORDER.forEach(function(dlabel) {
+        if (dlabel === 'All') return;
+        var dec = (charge.decisions || []).find(function(d) { return d.label === dlabel; });
+        decisionsSum += dec ? dec.count : 0;
+      });
       var runningPct = 0;
+      DECISION_ORDER.forEach(function(dlabel) {
+        if (dlabel === 'All') return;
+        var dec = (charge.decisions || []).find(function(d) { return d.label === dlabel; });
+        var dc = dec ? dec.count : 0;
+        if (dc <= 0) return;
+        var segWidthPct = decisionsSum > 0 ? (dc / decisionsSum) * barWidthPct : 0;
+        if (segWidthPct <= 0) return;
+        var seg = document.createElement('div');
+        seg.className = 'bar-segment';
+        seg.style.left = runningPct + '%';
+        seg.style.width = segWidthPct + '%';
+        seg.style.background = DECISION_COLORS[dlabel];
+        seg.style.opacity = '0.85';
+        if (runningPct > 0) {
+          seg.style.borderLeft = '1px solid rgba(244,240,230,0.6)';
+        }
+        track.appendChild(seg);
+        runningPct += segWidthPct;
+      });
+    } else {
+      // Same overflow guard as the group bars' filtered branch.
+      var rawSum = 0;
+      var selectedDc = {};
       DECISION_ORDER.forEach(function(dlabel) {
         if (dlabel === 'All' || !activeDecisions.has(dlabel)) return;
         var dec = (charge.decisions || []).find(function(d) { return d.label === dlabel; });
         var dc = dec ? dec.count : 0;
+        selectedDc[dlabel] = dc;
+        rawSum += dc;
+      });
+      var denom = Math.max(charge.count, rawSum, 1);
+      var runningPct = 0;
+      DECISION_ORDER.forEach(function(dlabel) {
+        if (dlabel === 'All' || !activeDecisions.has(dlabel)) return;
+        var dc = selectedDc[dlabel] || 0;
         if (dc <= 0) return;
-        var segPct = charge.count > 0 ? (dc / charge.count * 100) : 0;
+        var segPct = (dc / denom) * 100;
         var seg = document.createElement('div');
         seg.className = 'bar-segment';
         seg.style.left = runningPct + '%';
@@ -301,7 +361,6 @@ function showGroupTooltip(group, e) {
       charges.forEach(function(c) {
         var pct = Math.round(c.count / group.count * 100);
         html += '<div class="tt-row">'
-          + '<div class="tt-bar-swatch" style="background:' + group.color + '"></div>'
           + '<span class="tt-label">' + c.name + '</span>'
           + '<span class="tt-count">' + c.count + '</span>'
           + '<span class="tt-pct">(' + pct + '%)</span></div>';
