@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 """
-Regenerate the DATA constant in script.js from cpd_data.csv.
+Regenerate data.json from cpd_data.csv.
 
-Usage: python3 build_data.py
+TAXONOMY (charge -> group mapping, group order, colors) is defined here
+statically — it doesn't come from the CSV, since it's a curated editorial
+grouping, not a computed value. Everything else (counts, percentages,
+decision breakdowns) is computed fresh from the CSV on every run.
+
+Setup:
+  - Put cpd_data.csv next to this file (or edit CSV_PATH).
+
+Run:
+  python3 build_data.py
 """
 
 import csv
@@ -11,48 +20,126 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-HERE = Path(__file__).parent
-SCRIPT_JS = HERE / "script.js"
+HERE     = Path(__file__).parent
+DATA_JSON = HERE / "data.json"
 CSV_PATH  = HERE / "cpd_data.csv"
 
-# ── 1. Read existing DATA structure from script.js ───────────────────────────
+# ── 1. Static taxonomy ────────────────────────────────────────────────────────
+# Group colors are 12 distinct hues drawn from STYLE.md's token set (plus one
+# new blue) — one hue per group, no group sharing a lighter/darker shade of
+# another group's hue. Categories are identity, not a spectrum, so they don't
+# get a gradient (see STYLE.md and the per-year/cpd-viz palette fix).
 
-raw = SCRIPT_JS.read_text(encoding="utf-8")
-match = re.search(r'^const DATA = (\[.*?\]);', raw, re.DOTALL | re.MULTILINE)
-if not match:
-    raise RuntimeError("Could not find DATA in script.js")
-TEMPLATE = json.loads(match.group(1))
+TAXONOMY = [{'group': 'Neglect of Duty',
+  'color': '#23685b',
+  'charges': [{'name': 'Failure to Report/Notify'},
+              {'name': 'Lack of Service'},
+              {'name': 'Neglect of Duty'},
+              {'name': 'Duty Report Violation'},
+              {'name': 'Failure to Supervise'},
+              {'name': 'Asleep On-Duty'},
+              {'name': 'Failed to Assist'},
+              {'name': 'Failed to Provide Language Services'},
+              {'name': 'Failed to Take Corrective Action'}]},
+ {'group': 'Unprofessional Behavior',
+  'color': '#879599',
+  'charges': [{'name': 'Unprofessional Conduct'},
+              {'name': 'Offensive Remarks'},
+              {'name': 'Diminished Esteem of CPD'},
+              {'name': 'Uniform Violation'},
+              {'name': 'Appearance of Impropriety'},
+              {'name': 'Telecommunications Violation'},
+              {'name': 'Failed to Identify'}]},
+ {'group': 'Body Camera Violation',
+  'color': '#7d6b9e',
+  'charges': [{'name': 'Failed to Activate',
+               'desc': 'Officer failed to activate the WCS or place it in event mode before or '
+                       'during a qualifying incident requiring recording.'},
+              {'name': 'Unspecified',
+               'desc': 'Disciplinary record listed a generic “WCS violation” without describing '
+                       'the specific nature of the offense.'},
+              {'name': 'Ended Recording Early',
+               'desc': 'Officer turned off the WCS or allowed it to return to buffering mode '
+                       'before an incident concluded, cutting off the recording.'},
+              {'name': 'Failed to Upload or Tag',
+               'desc': 'Officer failed to upload, categorize, or tag captured WCS media at the end '
+                       'of a tour or within required timeframes.'},
+              {'name': 'Damaged or Lost Camera',
+               'desc': 'Officer failed to safeguard assigned WCS equipment — including losing, '
+                       'allowing damage to, or failing to secure the device.'}]},
+ {'group': 'Attendance',
+  'color': '#e6a94d',
+  'charges': [{'name': 'Sick Leave Abuse'},
+              {'name': 'Absent Without Leave (AWOL)'},
+              {'name': 'Refusal of Mandatory Overtime'},
+              {'name': 'Tardiness'},
+              {'name': 'Attendance and Overtime Violations'}]},
+ {'group': 'Use of Force',
+  'color': '#d64d4d',
+  'charges': [{'name': 'Use of Force Violation'},
+              {'name': 'Failed to Report/Intervene'},
+              {'name': 'Failed to De-escalate'},
+              {'name': 'Failed to Request Medical Attention'},
+              {'name': 'Improperly Handled a Firearm'},
+              {'name': 'Unauthorized Ammunition/Firearms'}]},
+ {'group': 'Integrity and Honesty',
+  'color': '#4d7ea8',
+  'charges': [{'name': 'Untruthfulness'},
+              {'name': 'Database Misuse'},
+              {'name': 'Cheating and Plagiarism'},
+              {'name': 'Confidential Information Violation'},
+              {'name': 'Ethics Violation'}]},
+ {'group': 'Vehicle and Travel',
+  'color': '#5fa896',
+  'charges': [{'name': 'Vehicle Pursuit Violation'},
+              {'name': 'Preventable Motor Vehicle Accident'},
+              {'name': 'Travel Violation'}]},
+ {'group': 'Compliance',
+  'color': '#a9d2cf',
+  'charges': [{'name': 'Insubordination'},
+              {'name': 'Unauthorized Secondary Employment'},
+              {'name': 'OPS Investigation Violation'}]},
+ {'group': 'Criminal Conduct',
+  'color': '#ccd8db',
+  'charges': [{'name': 'Arrest or Criminal Charge'}, {'name': 'Violence in the Workplace'}]},
+ {'group': 'Improper Conduct',
+  'color': '#d0d64c',
+  'charges': [{'name': 'Improper Search/Frisk'},
+              {'name': 'Improper Arrest/Detainment'},
+              {'name': 'Improper Tow'},
+              {'name': 'Improper Stop'},
+              {'name': 'Arrestee Handling Violation'},
+              {'name': 'Improper Citation'},
+              {'name': 'Mishandled Juvenile'}]},
+ {'group': 'Evidence and Property',
+  'color': '#e56430',
+  'charges': [{'name': 'Failed to Safeguard Equipment'},
+              {'name': 'Evidence Collection Violation'},
+              {'name': 'Failed to Safeguard Property'}]},
+ {'group': 'Drugs and Alcohol',
+  'color': '#dbe7e3',
+  'charges': [{'name': 'Drug & Alcohol Testing Policy Violation'},
+              {'name': 'Consumed Prohibited Substance While On Duty'}]}]
 
-# Build canonical charge name → group name
+DECISION_ORDER  = ["All", "Charge Dismissed", "Reinstruction", "Written Reprimand",
+                    "Suspension", "Termination", "Resignation", "Demotion"]
+DECISION_COLORS = {"Termination": "#d64d4d", "Resignation": "#e56430", "Demotion": "#e6a94d",
+                    "Suspension": "#23685b", "Charge Dismissed": "#dbe7e3",
+                    "Written Reprimand": "#5fa896", "Reinstruction": "#a9d2cf"}
+
 charge_to_group = {}
-for group in TEMPLATE:
+charge_display  = {}
+for group in TAXONOMY:
     for charge in group["charges"]:
-        charge_to_group[charge["name"].strip().lower()] = group["group"]
+        key = charge["name"].strip().lower()
+        charge_to_group[key] = group["group"]
+        charge_display[key]  = charge["name"].strip()
 
 # The Body Camera group's charges are display subcategories (classified from
 # text), not CSV charge tokens — map the real CSV token explicitly.
-charge_to_group["body camera violation"] = "Body Camera Violation" 
+charge_to_group["body camera violation"] = "Body Camera Violation"
 
-# Build canonical charge name → display name (preserve casing)
-charge_display = {}
-for group in TEMPLATE:
-    for charge in group["charges"]:
-        charge_display[charge["name"].strip().lower()] = charge["name"].strip()
-
-# Group colors
-group_colors = {g["group"]: g["color"] for g in TEMPLATE}
-
-# Decision colors (from DECISION_COLORS in script.js)
-match_dc = re.search(r'const DECISION_COLORS = (\{.*?\});', raw, re.DOTALL)
-if not match_dc:
-    raise RuntimeError("Could not find DECISION_COLORS in script.js")
-DECISION_COLORS = json.loads(match_dc.group(1))
-
-# Decision order (from DECISION_ORDER in script.js, skip "All")
-match_do = re.search(r'const DECISION_ORDER = (\[.*?\]);', raw, re.DOTALL)
-if not match_do:
-    raise RuntimeError("Could not find DECISION_ORDER in script.js")
-DECISION_ORDER = [d for d in json.loads(match_do.group(1)) if d != "All"]
+group_colors = {g["group"]: g["color"] for g in TAXONOMY}
 
 # ── 2. Normalization helpers ─────────────────────────────────────────────────
 
@@ -174,7 +261,7 @@ with open(CSV_PATH, newline="", encoding="utf-8-sig") as f:
             for nd in nds:
                 wcs_decs[key][nd] += 1
 
-# ── 4. Reconstruct DATA ───────────────────────────────────────────────────────
+# ── 4. Build data.json ────────────────────────────────────────────────────────
 
 def build_decisions(dec_counts):
     result = []
@@ -185,7 +272,7 @@ def build_decisions(dec_counts):
     return result
 
 new_data = []
-for group in TEMPLATE:
+for group in TAXONOMY:
     gname = group["group"]
     gcount = group_count[gname]
     gpct   = round(gcount / total_hearings * 100, 1)
@@ -223,21 +310,12 @@ for group in TEMPLATE:
         "charges":   new_charges,
     })
 
-# ── 5. Update script.js ───────────────────────────────────────────────────────
+payload = {
+    "totalHearings":  total_hearings,
+    "decisionOrder":  DECISION_ORDER,
+    "decisionColors": DECISION_COLORS,
+    "groups":         new_data,
+}
 
-data_json = json.dumps(new_data, separators=(",", ":"))
-new_raw = re.sub(
-    r'^const DATA = \[.*?\];',
-    f'const DATA = {data_json};',
-    raw,
-    flags=re.DOTALL | re.MULTILINE,
-)
-new_raw = re.sub(
-    r'^const TOTAL_HEARINGS = \d+;',
-    f'const TOTAL_HEARINGS = {total_hearings};',
-    new_raw,
-    flags=re.MULTILINE,
-)
-
-SCRIPT_JS.write_text(new_raw, encoding="utf-8")
-print(f"\nscript.js updated: DATA regenerated, TOTAL_HEARINGS = {total_hearings}")
+DATA_JSON.write_text(json.dumps(payload, indent=None, separators=(",", ":")), encoding="utf-8")
+print(f"\nWrote {DATA_JSON.name}: TOTAL_HEARINGS = {total_hearings}")
