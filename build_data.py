@@ -196,6 +196,7 @@ with open(CSV_PATH, newline="", encoding="utf-8-sig") as f:
             else:
                 unknown_decs[d] += 1
 
+        groups_this_hearing = set()
         for charge in charges:
             ckey = CSV_CHARGE_ALIASES.get(charge.lower().strip(), charge.lower().strip())
             group = charge_to_group.get(ckey)
@@ -204,10 +205,21 @@ with open(CSV_PATH, newline="", encoding="utf-8-sig") as f:
                 continue
 
             charge_count[ckey] += 1
-            group_count[group]  += 1
-
             for nd in norm_decisions:
                 charge_decs[ckey][nd] += 1
+
+            groups_this_hearing.add(group)
+
+        # Group-level count/decisions are tallied once per hearing per group,
+        # not once per matching charge — a hearing with two charges in the
+        # same group (e.g. "Failure to Report/Notify, Lack of Service", both
+        # Neglect of Duty) previously counted that one hearing twice toward
+        # the group's total, inflating "count" past the true number of
+        # hearings in that category. Same dedup the per-year chart already
+        # uses (see charge-by-year's build_data.py).
+        for group in groups_this_hearing:
+            group_count[group] += 1
+            for nd in norm_decisions:
                 group_decs[group][nd] += 1
 
 print(f"Total hearings in CSV: {total_hearings}")
